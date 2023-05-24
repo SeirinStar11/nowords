@@ -1,0 +1,210 @@
+//打开页面时浏览器动态的加载js/css文件；加载完成后才能起作用，如：$(function(){......})里面
+//调用示例：loadFile('myscript.js','js');
+var loadFiles = '|';	//页面全局变量，加载的文件集合，防止重复加载。
+function loadFile(fpath, fext){
+	fpath = fpath.toLowerCase();
+	if(loadFiles.indexOf('|' + fpath + '|') == -1){
+		loadFiles += fpath + '|';
+		if(fpath.lastIndexOf('.') > 0){
+			if(typeof(fext) == 'undefined'){
+				fext = fpath.substr(fpath.lastIndexOf('.') + 1);
+			}
+			if(fext == 'js'){
+				document.write('<script src="' + fpath + '"><\/script>');
+			}else if(fext == 'css'){
+				document.write('<link href="' + fpath + '" type="text/css" rel="stylesheet">');
+			}
+		}
+	}
+}
+
+
+//设置隔行（对象）背景变色
+//调用示例：subBackcolor('.bge tr');
+function subBackcolor(obj,bg1,bg2){
+	if(bg1 == null){ bg1='t1';}
+	if(bg2 == null){ bg2='t2';}
+	$(obj+':odd').addClass(bg1);
+	$(obj).mouseover(function(){ 
+		$(this).addClass(bg2); 
+	}).mouseout(function(){ 
+		$(this).removeClass(bg2); 
+	});	
+}
+
+
+//打开asyncbox窗口，根据设置宽高，最多不超过母窗口
+//调用示例：openDlg('/abc.html','测试窗口');
+function openDlg(url,title,kw,kh){
+	var nkw = $(window).width() - 40;
+	var nkh = $(window).height() - 60;
+	if(kw == null || kw < 50 || kw > nkw){
+		kw = nkw;
+	}
+	if(kh == null || kh < 50 || kh > nkh){
+		kh = nkh;
+	}
+		
+	if(title == null || title == ''){
+		title = '新窗口';
+	}
+
+	asyncbox.open({ id:'tiuDlg',modal:true, url:url, title:title, width:kw, height:kh });
+}
+
+//关闭打开的窗口（参数为关闭后是否刷新/重载父窗口页面）
+function closeDlg(shuaxin) {
+	asyncbox.close("tiuDlg");
+	if (shuaxin) {
+	    location.reload(true);
+    }
+}
+
+
+//本地压缩后上传图片
+//<script src="/iures/jquery/upimg/lrz.bundle.js">< /script>
+//调用示例：lrzUpload(this,1280,'1','#tpic1','#upimg1');
+function lrzUpload(obj,iw,lx,imgVal,imgSrc){
+	lrz(obj.files[0], { width:iw, quality:0.85}).then(function (rst) {
+		var imgdata = rst.base64.substr( rst.base64.indexOf(',') + 1 );
+		$.post("/iures/cshap/upimg.ashx?lx="+lx, { formFile:imgdata }, function (data) {
+			$(imgVal).val(data);
+			$(imgSrc).attr("src", data);
+			//$(".wbox").hide();
+		});
+	});
+}
+
+
+//打开查看大图片
+//调用示例：openBigImage(this);
+function openBigImage(obj){
+	var tp = $(obj).attr('src').replace("/thumb/","/");
+	openDlg('/iures/cshap/imgshow.aspx?tp='+tp,'查看图片');
+	return false;
+}
+
+
+//金额转换为大写
+//调用示例：moneyCN(12.58);
+function moneyCN(num) {
+    var strOutput = "";
+    var strUnit = '仟佰拾亿仟佰拾万仟佰拾元角分';
+    num += "00";
+    var intPos = num.indexOf('.');
+    if (intPos >= 0){
+        num = num.substring(0, intPos) + num.substr(intPos + 1, 2);
+	}
+    strUnit = strUnit.substr(strUnit.length - num.length);
+    for (var i = 0; i < num.length; i++){
+        strOutput += '零壹贰叁肆伍陆柒捌玖'.substr(num.substr(i, 1), 1) + strUnit.substr(i, 1);
+	}
+    return strOutput.replace(/零角零分$/, '整').replace(/零[仟佰拾]/g, '零').replace(/零{2,}/g, '零').replace(/零([亿|万])/g, '$1').replace(/零+元/, '元').replace(/亿零{0,3}万/, '亿').replace(/^元/, "零元");
+}
+
+
+//金额格式化，保留2位小数，大于99999999则设置为0
+function formatMoney(obj){
+	//if(obj>19999999)
+	//	obj=0;
+	return obj.toFixed(2);
+}
+//
+function inMoney(obj){
+	$(obj).numberbox({min:0,max:19999999, precision:2});
+}
+
+
+//根据实际情况切换浏览界面，传递参数为当前页面版式(www/m)
+//检查Cookie设置的页面版式，当不支持cookie时不进行任何操作
+function reVerWeb(){
+	//alert(window.location.hash.replace('#', ''));
+	if(cookieEnabled()){
+		var nowver = 'www';
+		var nowurl = window.location.host;
+		var newver = 'www';
+		var newurl = '';
+		var hashurl = window.location.hash;
+		if(hashurl.replace('#', '') != ''){
+			newver = hashurl.replace('#', '');
+			setCookie('ver', newver);
+		}
+		if(getCookie('ver') == null){
+			if(/AppleWebKit.*Mobile/i.test(navigator.userAgent) || /\(Android.*Mobile.+\).+Gecko.+Firefox/i.test(navigator.userAgent) || (/MIDP|SymbianOS|NOKIA|SAMSUNG|LG|NEC|TCL|Alcatel|BIRD|DBTEL|Dopod|PHILIPS|HAIER|LENOVO|MOT-|Nokia|SonyEricsson|SIE-|Amoi|ZTE/.test(navigator.userAgent))){
+				newver = 'm';
+			}
+			setCookie('ver', newver);
+		}else{
+			newver = getCookie('ver');
+		}
+
+		var tmpurl = '';	//当当前域名和新版本不匹配的时候临时保存新版面指向的域名
+		for(var key in reVerUrl){
+			if(key == nowurl){
+				nowver = reVerUrl[key];
+			}
+			if(key == nowurl && reVerUrl[key] == newver){
+				newurl = key;	
+			}else if(reVerUrl[key] == newver){
+				tmpurl = key;
+			}
+		}
+		
+		if(nowver != newver){
+			if(newurl == '' && tmpurl !=''){
+				newurl = tmpurl;	
+			}
+			if(newurl != ''){
+				window.location.href = window.location.href.replace('http://' + nowurl, 'http://' + newurl);
+			}
+		}
+	}
+}
+//设置并跳转到指定版页,如指定tourl则需带http://前缀，且不能带#参数
+function toVerWeb(ver, tohome){
+	if(cookieEnabled()){
+		setCookie('ver', ver)
+	}
+	var tourl = '';
+	for(var key in reVerUrl){
+		if(reVerUrl[key] == ver){
+			tourl = key;	
+		}
+	}
+	var nowurl = window.location.host;
+	if(nowurl != tourl){
+		var newurl = 'http://' + tourl;
+		if(tohome != true){
+			newurl = window.location.href.replace('http://' + nowurl, 'http://' + tourl).replace(window.location.hash, '');
+		}
+		newurl += '#' + ver;
+		window.location.href = newurl;
+	}
+	return false;
+}
+//判断浏览器是否支持cookie
+function cookieEnabled(){
+	return navigator.cookieEnabled;
+}
+//获取Cookie的值，临时使用
+function getCookie(c_name){
+	if (document.cookie.length>0){
+		c_start = document.cookie.indexOf(c_name + '=');
+		if (c_start!=-1){ 
+			c_start = c_start + c_name.length + 1; 
+			c_end=document.cookie.indexOf(';',c_start);
+			if (c_end == -1){
+				c_end=document.cookie.length;
+			}
+			return unescape(document.cookie.substring(c_start,c_end))
+		}
+	}
+	return null;
+}
+//设置Cookie值
+function setCookie(c_name,value,expiredays){
+	var exdate = new Date();
+	exdate.setDate(exdate.getDate() + expiredays);
+	document.cookie = c_name + '=' + escape(value) + ((expiredays==null) ? '' : ';expires=' + exdate.toGMTString());
+}
+
